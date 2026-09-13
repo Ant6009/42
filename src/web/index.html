@@ -7,9 +7,44 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <!-- Login view, chat view, and conversation sidebar.
-       Wired up in app.js against /v1/auth, /v1/ask (SSE), /v1/conversations. -->
-  <div id="app"></div>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span class="logo">42</span>
+        <button id="new-chat-btn" title="New conversation">+</button>
+      </div>
+      <nav id="conversation-list"></nav>
+      <div class="sidebar-footer">
+        <span id="user-label"></span>
+        <button id="logout-btn" hidden>Log out</button>
+      </div>
+    </aside>
+
+    <main id="main">
+      <!-- Login view -->
+      <section id="login-view" hidden>
+        <form id="login-form" class="login-card">
+          <h1>42</h1>
+          <p class="muted">Local search-augmented answers</p>
+          <input id="login-username" type="text" placeholder="Username" autocomplete="username" required />
+          <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+          <button type="submit">Log in</button>
+          <p id="login-error" class="error" hidden></p>
+        </form>
+      </section>
+
+      <!-- Chat view -->
+      <section id="chat-view" hidden>
+        <div id="messages"></div>
+        <div id="composer">
+          <form id="ask-form">
+            <textarea id="question" rows="2" placeholder="Ask anything... (Enter to send, Shift+Enter for newline)"></textarea>
+            <button type="submit" id="ask-btn">Ask</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
   <script src="/app.js"></script>
 </body>
 </html>

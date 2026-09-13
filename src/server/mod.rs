@@ -44,24 +44,26 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 }
 
 pub fn build_router(state: Arc<AppState>) -> axum::Router {
-    let api = axum::Router::new()
-        .route("/v1/auth/login", axum::routing::post(auth::login))
-        .route("/v1/auth/logout", axum::routing::post(auth::logout))
-        .route("/v1/me", axum::routing::get(auth::me))
-        .route("/v1/ask", axum::routing::post(ask::ask))
-        .route("/v1/conversations", axum::routing::get(conversations::list))
+    // Login is public; everything else under /v1 requires a session.
+    let public = axum::Router::new().route("/auth/login", axum::routing::post(auth::login));
+    let protected = axum::Router::new()
+        .route("/auth/logout", axum::routing::post(auth::logout))
+        .route("/me", axum::routing::get(auth::me))
+        .route("/ask", axum::routing::post(ask::ask))
+        .route("/conversations", axum::routing::get(conversations::list))
         .route(
-            "/v1/conversations",
+            "/conversations",
             axum::routing::post(conversations::create),
         )
         .route(
-            "/v1/conversations/{id}",
+            "/conversations/{id}",
             axum::routing::get(conversations::get).delete(conversations::delete),
         )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::require_user,
         ));
+    let api = public.merge(protected);
 
     axum::Router::new()
         .nest("/v1", api)

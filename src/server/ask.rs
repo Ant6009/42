@@ -21,6 +21,7 @@ use axum::Json;
 use futures_util::{Stream, StreamExt};
 
 use crate::engine::citations;
+use crate::engine::llm::LlmDelta;
 use crate::engine::prompt::{build_messages, PromptOptions};
 use crate::engine::search;
 use crate::server::auth::UserIdentity;
@@ -140,11 +141,16 @@ async fn ask_stream(
                 return;
             }
         };
-        while let Some(token) = llm.next().await {
-            match token {
-                Ok(t) => {
+        while let Some(delta) = llm.next().await {
+            match delta {
+                Ok(LlmDelta::Token(t)) => {
                     answer.push_str(&t);
                     yield ev(serde_json::json!({"type": "token", "text": t}));
+                }
+                Ok(LlmDelta::Thinking(t)) => {
+                    // Reasoning phase: not part of the answer, but signals
+                    // progress so the UI can show a Thinking indicator.
+                    yield ev(serde_json::json!({"type": "thinking", "text": t}));
                 }
                 Err(e) => {
                     yield ev(serde_json::json!({"type": "error", "message": e.to_string()}));

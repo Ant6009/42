@@ -5,7 +5,7 @@ use tracing::info;
 #[command(name = "42", about = "Standalone local-network Perplexity clone")]
 struct Cli {
     /// Path to the TOML config file.
-    #[arg(short, long, default_value = "/etc/42/42.toml")]
+    #[arg(short, long, global = true, default_value = "/etc/42/42.toml")]
     config: std::path::PathBuf,
 
     #[command(subcommand)]
@@ -41,17 +41,19 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cli = Cli::parse();
-    let config = fortytwo::config::Config::load(&cli.config)?;
 
     match cli.command {
         None | Some(Command::Serve) => {
+            let config = fortytwo::config::Config::load(&cli.config)?;
             info!(bind = %config.server.bind, "starting 42");
             fortytwo::server::run(config).await
         }
         Some(Command::Admin { action }) => match action {
             AdminAction::CreateUser { username } => {
+                let config = fortytwo::config::Config::load(&cli.config)?;
                 fortytwo::auth::cli_create_user(&config, &username)
             }
+            // hash-password needs no config.
             AdminAction::HashPassword => fortytwo::auth::cli_hash_password(),
         },
     }

@@ -5,6 +5,19 @@ use std::pin::Pin;
 
 use futures_util::{Stream, StreamExt};
 
+/// One chunk of a streamed completion.
+///
+/// Thinking models (e.g. Qwen3) emit `reasoning_content` before the final
+/// `content`; both are surfaced so callers can show progress instead of
+/// waiting in silence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LlmDelta {
+    /// Final answer content.
+    Token(String),
+    /// Reasoning/thinking content (not part of the answer).
+    Thinking(String),
+}
+
 /// Client bound to one base URL and model.
 #[derive(Debug, Clone)]
 pub struct LlmClient {
@@ -22,11 +35,11 @@ impl LlmClient {
         }
     }
 
-    /// Stream chat completions; yields content tokens as they arrive.
+    /// Stream chat completions; yields content and thinking chunks.
     pub fn stream_chat(
         &self,
         messages: &[serde_json::Value],
-    ) -> anyhow::Result<Pin<Box<dyn Stream<Item = anyhow::Result<String>> + Send>>> {
+    ) -> anyhow::Result<Pin<Box<dyn Stream<Item = anyhow::Result<LlmDelta>> + Send>>> {
         let url = format!("{}/chat/completions", self.base_url);
         let http = self.http.clone();
         let model = self.model.clone();
@@ -66,16 +79,16 @@ impl LlmClient {
                 while let Some(pos) = buf.iter().position(|&b| b == b'\n') {
                     let line_bytes: Vec<u8> = buf.drain(..=pos).collect();
                     let line = String::from_utf8_lossy(&line_bytes);
-                    if let Some(token) = extract_token(&line) {
-                        yield Ok(token);
+                    if let Some(delta) = extract_delta(&line) {
+                        yield Ok(delta);
                     }
                 }
             }
             // Trailing line without a final newline.
             if !buf.is_empty() {
                 let line = String::from_utf8_lossy(&buf);
-                if let Some(token) = extract_token(&line) {
-                    yield Ok(token);
+                if let Some(delta) = extract_delta(&line) {
+                    yield Ok(delta);
                 }
             }
         }
@@ -83,19 +96,28 @@ impl LlmClient {
     }
 }
 
-/// Extract the content token from one SSE line, if any.
+/// Extract a content or thinking chunk from one SSE line, if any.
 ///
 /// Lines look like `data: {"choices":[{"delta":{"content":"..."}}]}`;
-/// the stream ends with `data: [DONE]`.
-pub fn extract_token(line: &str) -> Option<String> {
+/// thinking models add `delta.reasoning_content` before the answer.
+/// The stream ends with `data: [DONE]`.
+pub fn extract_delta(line: &str) -> Option<LlmDelta> {
     let payload = line.trim().strip_prefix("data:")?.trim();
     if payload == "[DONE]" {
         return None;
     }
     let v: serde_json::Value = serde_json::from_str(payload).ok()?;
-    v.pointer("/choices/0/delta/content")?
-        .as_str()
-        .map(|s| s.to_string())
+    let delta = v.pointer("/choices/0/delta")?;
+    if let Some(t) = delta.get("content").and_then(|c| c.as_str()) {
+        if !t.is_empty() {
+            return Some(LlmDelta::Token(t.to_string()));
+        }
+    }
+    delta
+        .get("reasoning_content")
+        .and_then(|c| c.as_str())
+        .filter(|t| !t.is_empty())
+        .map(|t| LlmDelta::Thinking(t.to_string()))
 }
 
 #[cfg(test)]
@@ -136,25 +158,36 @@ data: [DONE]
         let messages = vec![serde_json::json!({"role": "user", "content": "hi"})];
         let mut stream = client.stream_chat(&messages).unwrap();
         let mut collected = String::new();
-        while let Some(token) = stream.next().await {
-            collected.push_str(&token.unwrap());
+        while let Some(delta) = stream.next().await {
+            if let LlmDelta::Token(t) = delta.unwrap() {
+                collected.push_str(&t);
+            }
         }
         assert_eq!(collected, "Hello");
     }
 
     #[test]
-    fn extract_token_parses_sse_lines() {
+    fn extract_delta_parses_sse_lines() {
         assert_eq!(
-            extract_token(r#"data: {"choices":[{"delta":{"content":"hi"}}]}"#),
-            Some("hi".into())
+            extract_delta(r#"data: {"choices":[{"delta":{"content":"hi"}}]}"#),
+            Some(LlmDelta::Token("hi".into()))
         );
-        assert_eq!(extract_token("data: [DONE]"), None);
-        assert_eq!(extract_token(""), None);
-        assert_eq!(extract_token(": keepalive comment"), None);
-        // Empty delta (role-only chunk) yields no token.
         assert_eq!(
-            extract_token(r#"data: {"choices":[{"delta":{"role":"assistant"}}]}"#),
+            extract_delta(r#"data: {"choices":[{"delta":{"reasoning_content":"hmm"}}]}"#),
+            Some(LlmDelta::Thinking("hmm".into()))
+        );
+        assert_eq!(extract_delta("data: [DONE]"), None);
+        assert_eq!(extract_delta(""), None);
+        assert_eq!(extract_delta(": keepalive comment"), None);
+        // Empty delta (role-only chunk) yields nothing.
+        assert_eq!(
+            extract_delta(r#"data: {"choices":[{"delta":{"role":"assistant"}}]}"#),
             None
+        );
+        // content takes precedence when both are present.
+        assert_eq!(
+            extract_delta(r#"data: {"choices":[{"delta":{"content":"a","reasoning_content":"b"}}]}"#),
+            Some(LlmDelta::Token("a".into()))
         );
     }
 }
