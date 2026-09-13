@@ -34,6 +34,8 @@ clap = { version = "4", features = ["derive"] }
 toml = "0.8"
 rand = "0.8"
 sha2 = "0.10"
+rpassword = "7"
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = "3"

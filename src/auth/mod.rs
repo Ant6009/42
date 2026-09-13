@@ -5,16 +5,30 @@
 //! bearer tokens and self-registration can be added later without rewrites.
 
 use crate::config::Config;
+use crate::store::Store;
 
 pub mod service;
 
-/// CLI: `42 admin create-user <name>` — prompts for a password, writes to SQLite.
+pub use service::AuthService;
+
+/// CLI: `42 admin create-user <name>` — prompts for a password (twice),
+/// inserts the user as a regular user.
 pub fn cli_create_user(config: &Config, username: &str) -> anyhow::Result<()> {
-    let _ = (config, username);
-    todo!("prompt for password, hash with argon2id, insert user row")
+    let store = Store::open(std::path::Path::new(&config.database.path))?;
+    let password = rpassword::prompt_password("Password: ")?;
+    let confirm = rpassword::prompt_password("Confirm: ")?;
+    if password != confirm {
+        anyhow::bail!("passwords do not match");
+    }
+    let id = AuthService::create_user(&store, username, &password, false)?;
+    println!("created user '{username}' (id {id})");
+    Ok(())
 }
 
-/// CLI: `42 admin hash-password` — prompts, prints the argon2id hash.
+/// CLI: `42 admin hash-password` — prompts, prints the argon2id hash for
+/// the admin seed in the TOML config.
 pub fn cli_hash_password() -> anyhow::Result<()> {
-    todo!("prompt for password, print argon2id hash")
+    let password = rpassword::prompt_password("Password: ")?;
+    println!("{}", AuthService::hash_password(&password)?);
+    Ok(())
 }
