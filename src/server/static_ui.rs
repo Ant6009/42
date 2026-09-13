@@ -27,8 +27,11 @@ fn js(body: &str) -> axum::response::Response {
 
 fn response(body: &str, content_type: &str) -> axum::response::Response {
     let mut resp = axum::response::Response::new(axum::body::Body::from(body.to_string()));
-    resp.headers_mut()
-        .insert(header::CONTENT_TYPE, content_type.parse().unwrap());
+    let h = resp.headers_mut();
+    h.insert(header::CONTENT_TYPE, content_type.parse().unwrap());
+    // The UI is embedded in the binary; every deploy changes it, so never
+    // let browsers heuristic-cache it.
+    h.insert(header::CACHE_CONTROL, "no-cache".parse().unwrap());
     *resp.status_mut() = StatusCode::OK;
     resp
 }
