@@ -1,0 +1,25 @@
+# 42 default configuration
+# Install to /etc/42/42.toml on the NixOS box (192.168.68.128).
+
+[server]
+bind = "0.0.0.0:4242"
+
+[llm]
+base_url = "http://192.168.68.128:9292/v1"
+model = "Qwen3.8-27b-UD-Q6_K_M"
+context_window = 32768
+
+[search]
+base_url = "http://192.168.68.128:8888"
+max_sources = 8
+snippet_chars = 500
+
+[database]
+path = "/var/lib/42/42.sqlite"
+history_turns = 10
+
+# First-admin bootstrap: seeded on first start if the user does not exist.
+# Generate the hash with: 42 admin hash-password
+# [admin]
+# username = "admin"
+# password_hash = ""
