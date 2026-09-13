@@ -26,7 +26,12 @@ enum Command {
 #[derive(Subcommand)]
 enum AdminAction {
     /// Create a user (prompts for a password).
-    CreateUser { username: String },
+    CreateUser {
+        username: String,
+        /// Grant admin privileges (settings access).
+        #[arg(long)]
+        is_admin: bool,
+    },
     /// Print the argon2id hash of a password (for the admin seed in TOML).
     HashPassword,
 }
@@ -49,9 +54,9 @@ async fn main() -> anyhow::Result<()> {
             fortytwo::server::run(config).await
         }
         Some(Command::Admin { action }) => match action {
-            AdminAction::CreateUser { username } => {
+            AdminAction::CreateUser { username, is_admin } => {
                 let config = fortytwo::config::Config::load(&cli.config)?;
-                fortytwo::auth::cli_create_user(&config, &username)
+                fortytwo::auth::cli_create_user(&config, &username, is_admin)
             }
             // hash-password needs no config.
             AdminAction::HashPassword => fortytwo::auth::cli_hash_password(),

@@ -55,10 +55,14 @@
         config = lib.mkIf config.services.fortytwo.enable {
           systemd.services."42" = {
             wantedBy = [ "multi-user.target" ];
-            after = [ "network.target" ];
+            after = [ "network-online.target" ];
+            wants = [ "network-online.target" ];
             serviceConfig = {
               ExecStart = "${pkgs.callPackage pkg {}}/bin/42 --config ${config.services.fortytwo.configPath}";
               Restart = "on-failure";
+              RestartSec = 3;
+              StateDirectory = "42";   # /var/lib/42 for the SQLite DB
+              StateDirectoryMode = "0750";
             };
             user = "42";
             group = "42";
@@ -71,9 +75,9 @@
           };
           users.groups."42" = { };
 
-          # NOTE: the SQLite path and /etc/42/42.toml must be writable by the
-          # service user; adjust StateDirectory or permissions in the config.
-          environment.etc."42/42.toml".source = config.services.fortytwo.configPath;
+          # The config file itself is managed outside this module (e.g. by the
+          # host's own environment.etc or agenix); it must be readable by the
+          # service user.
         };
       };
     };

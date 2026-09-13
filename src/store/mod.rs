@@ -56,6 +56,11 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at      TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_msg_conv ON messages(conversation_id, id);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 "#;
 
 /// All persistent state for 42.
@@ -86,6 +91,68 @@ impl Store {
     ) -> anyhow::Result<T> {
         let mut guard = self.conn.lock().expect("store poisoned");
         f(&mut guard)
+    }
+
+    // ------------------------------------------------------------- settings
+
+    pub fn get_setting(&self, key: &str) -> anyhow::Result<Option<String>> {
+        self.with_conn(|conn| {
+            let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1")?;
+            let mut rows = stmt.query_map([key], |r| r.get::<_, String>(0))?;
+            let out = match rows.next() {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => return Err(e.into()),
+                None => None,
+            };
+            Ok(out)
+        })
+    }
+
+    pub fn set_setting(&self, key: &str, value: &str) -> anyhow::Result<()> {
+        self.with_conn(|conn| {
+            conn.execute(
+                "INSERT INTO settings (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                params![key, value],
+            )?;
+            Ok(())
+        })
+    }
+
+    pub fn get_all_settings(&self) -> anyhow::Result<std::collections::HashMap<String, String>> {
+        self.with_conn(|conn| {
+            let mut stmt = conn.prepare("SELECT key, value FROM settings")?;
+            let rows = stmt.query_map([], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+            })?;
+            let mut map = std::collections::HashMap::new();
+            for row in rows {
+                let (k, v) = row?;
+                map.insert(k, v);
+            }
+            Ok(map)
+        })
+    }
+
+    /// Insert default settings if the table is empty; no-op otherwise.
+    pub fn seed_settings_if_empty(
+        &self,
+        defaults: &[(String, String)],
+    ) -> anyhow::Result<bool> {
+        self.with_conn(|conn| {
+            let count: i64 =
+                conn.query_row("SELECT count(*) FROM settings", [], |r| r.get(0))?;
+            if count > 0 {
+                return Ok(false);
+            }
+            for (k, v) in defaults {
+                conn.execute(
+                    "INSERT INTO settings (key, value) VALUES (?1, ?2)",
+                    params![k, v],
+                )?;
+            }
+            Ok(true)
+        })
     }
 
     // ---------------------------------------------------------------- users

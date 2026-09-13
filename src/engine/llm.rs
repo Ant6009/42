@@ -28,8 +28,13 @@ pub struct LlmClient {
 
 impl LlmClient {
     pub fn new(base_url: &str, model: &str) -> Self {
+        Self::with_http(reqwest::Client::new(), base_url, model)
+    }
+
+    /// Reuse an existing client (connection pool) for a given endpoint/model.
+    pub fn with_http(http: reqwest::Client, base_url: &str, model: &str) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            http,
             base_url: base_url.trim_end_matches('/').to_string(),
             model: model.to_string(),
         }

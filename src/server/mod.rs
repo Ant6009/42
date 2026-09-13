@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use tower_http::trace::TraceLayer;
 
-use crate::config::Config;
-use crate::engine::llm::LlmClient;
+use crate::config::{Config, EngineSettings};
 use crate::store::Store;
 
 mod ask;
 mod auth;
 mod conversations;
+mod settings;
 mod static_ui;
 
 /// Shared application state.
@@ -18,16 +18,19 @@ mod static_ui;
 pub struct AppState {
     pub store: Arc<Store>,
     pub config: Config,
-    pub llm: LlmClient,
+    /// Shared HTTP client; LLM clients are built per-request from the
+    /// current settings on top of this pool.
+    pub http: reqwest::Client,
 }
 
 /// Build the axum router and serve until the process is terminated.
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let store = Arc::new(Store::open(std::path::Path::new(&config.database.path))?);
     seed_admin(&store, &config)?;
+    seed_settings(&store, &config)?;
 
     let state = AppState {
-        llm: LlmClient::new(&config.llm.base_url, &config.llm.model),
+        http: reqwest::Client::new(),
         config,
         store,
     };
@@ -59,6 +62,10 @@ pub fn build_router(state: Arc<AppState>) -> axum::Router {
             "/conversations/{id}",
             axum::routing::get(conversations::get).delete(conversations::delete),
         )
+        .route(
+            "/settings",
+            axum::routing::get(settings::get_settings).put(settings::put_settings),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::require_user,
@@ -83,5 +90,14 @@ fn seed_admin(store: &Store, config: &Config) -> anyhow::Result<()> {
     }
     store.create_user(&admin.username, &admin.password_hash, true)?;
     tracing::info!(username = %admin.username, "seeded admin user from config");
+    Ok(())
+}
+
+/// Seed engine settings from TOML on first start (no-op if already set).
+fn seed_settings(store: &Store, config: &Config) -> anyhow::Result<()> {
+    let defaults = EngineSettings::from_config(config).to_pairs();
+    if store.seed_settings_if_empty(&defaults)? {
+        tracing::info!("seeded engine settings from config");
+    }
     Ok(())
 }

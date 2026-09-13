@@ -20,8 +20,9 @@ use axum::response::IntoResponse;
 use axum::Json;
 use futures_util::{Stream, StreamExt};
 
+use crate::config::EngineSettings;
 use crate::engine::citations;
-use crate::engine::llm::LlmDelta;
+use crate::engine::llm::{LlmClient, LlmDelta};
 use crate::engine::prompt::{build_messages, PromptOptions};
 use crate::engine::search;
 use crate::server::auth::UserIdentity;
@@ -55,6 +56,23 @@ async fn ask_stream(
         use std::convert::Infallible;
 
         let ev = |v: serde_json::Value| Ok(Event::default().json_data(v).unwrap());
+
+        // 0. Load current engine settings (admin may have changed them).
+        let store = state.store.clone();
+        let config = state.config.clone();
+        let engine = match tokio::task::spawn_blocking(move || {
+            let map = store.get_all_settings()?;
+            Ok::<_, anyhow::Error>(EngineSettings::from_map(&map, &config))
+        })
+        .await
+        .map_err(|e| -> Infallible { unreachable!("{e:?}") })?
+        {
+            Ok(s) => s,
+            Err(e) => {
+                yield ev(serde_json::json!({"type": "error", "message": e.to_string()}));
+                return;
+            }
+        };
 
         // 1. Resolve or create the conversation.
         let store = state.store.clone();
@@ -93,7 +111,7 @@ async fn ask_stream(
         let store = state.store.clone();
         let cid_hist = cid.clone();
         let q_hist = question.clone();
-        let history_turns = state.config.database.history_turns;
+        let history_turns = engine.history_window;
         let history = match tokio::task::spawn_blocking(move || {
             store.append_message(&cid_hist, MessageRole::User, &q_hist, &[])?;
             store.recent_messages(&cid_hist, history_turns)
@@ -112,10 +130,10 @@ async fn ask_stream(
 
         // 3. Search.
         let sources = match search::search(
-            &state.config.search.base_url,
+            &engine.search_url,
             &question,
-            state.config.search.max_sources,
-            state.config.search.snippet_chars,
+            engine.search_max_results,
+            engine.search_snippet_chars,
         )
         .await
         {
@@ -129,12 +147,17 @@ async fn ask_stream(
 
         // 4. Build the prompt and stream the LLM.
         let opts = PromptOptions {
-            context_window: state.config.llm.context_window,
-            history_turns: state.config.database.history_turns,
+            context_window: engine.llm_context_window,
+            history_turns: engine.history_window,
         };
         let messages = build_messages(&history, &question, &sources, opts);
         let mut answer = String::new();
-        let mut llm = match state.llm.stream_chat(&messages) {
+        let llm = LlmClient::with_http(
+            state.http.clone(),
+            &engine.llm_base_url,
+            &engine.llm_model,
+        );
+        let mut llm = match llm.stream_chat(&messages) {
             Ok(s) => s,
             Err(e) => {
                 yield ev(serde_json::json!({"type": "error", "message": e.to_string()}));

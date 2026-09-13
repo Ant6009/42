@@ -283,6 +283,78 @@ html, body {
 }
 #ask-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* ----------------------------------------------------------- settings */
+#settings-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+  font-size: 15px;
+  cursor: pointer;
+}
+#settings-btn:hover { border-color: var(--accent); color: var(--text); }
+
+#settings-view { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 40px 16px; }
+.settings-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 560px;
+  padding: 24px 28px;
+}
+.settings-header { display: flex; align-items: center; justify-content: space-between; }
+.settings-header h1 { margin: 0; font-size: 20px; color: var(--accent); }
+#settings-back-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+#settings-back-btn:hover { border-color: var(--accent); color: var(--text); }
+#settings-form h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 22px 0 10px;
+}
+#settings-form h2:first-of-type { margin-top: 8px; }
+#settings-form label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+#settings-form input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+#settings-form input:focus { outline: none; border-color: var(--accent); }
+.settings-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.settings-actions button {
+  background: var(--accent);
+  color: #0e1116;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.settings-actions button:hover { filter: brightness(1.1); }
+
 /* Misc */
 .muted { color: var(--muted); font-size: 13px; }
 .error { color: var(--error); font-size: 13px; }

@@ -16,6 +16,7 @@
       <nav id="conversation-list"></nav>
       <div class="sidebar-footer">
         <span id="user-label"></span>
+        <button id="settings-btn" title="Settings" hidden>&#9881;</button>
         <button id="logout-btn" hidden>Log out</button>
       </div>
     </aside>
@@ -31,6 +32,46 @@
           <button type="submit">Log in</button>
           <p id="login-error" class="error" hidden></p>
         </form>
+      </section>
+
+      <!-- Settings view (admin only) -->
+      <section id="settings-view" hidden>
+        <div class="settings-card">
+          <div class="settings-header">
+            <h1>Settings</h1>
+            <button id="settings-back-btn" title="Back to chat">&#8592;</button>
+          </div>
+          <form id="settings-form">
+            <h2>Language model</h2>
+            <label>Endpoint (OpenAI-compatible)
+              <input id="set-llm-base-url" type="text" placeholder="http://host:9292/v1" required />
+            </label>
+            <label>Model
+              <input id="set-llm-model" type="text" placeholder="model-name" required />
+            </label>
+            <label>Context window (tokens)
+              <input id="set-llm-context-window" type="number" min="256" required />
+            </label>
+            <h2>Search</h2>
+            <label>SearXNG URL
+              <input id="set-search-url" type="text" placeholder="http://host:8888" required />
+            </label>
+            <label>Results per answer
+              <input id="set-search-max-results" type="number" min="1" max="20" required />
+            </label>
+            <label>Snippet length (chars)
+              <input id="set-search-snippet-chars" type="number" min="50" required />
+            </label>
+            <h2>Conversation</h2>
+            <label>History window (turns)
+              <input id="set-history-window" type="number" min="1" max="50" required />
+            </label>
+            <div class="settings-actions">
+              <button type="submit">Save</button>
+              <span id="settings-status" class="muted"></span>
+            </div>
+          </form>
+        </div>
       </section>
 
       <!-- Chat view -->

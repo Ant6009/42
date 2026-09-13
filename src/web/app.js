@@ -8,6 +8,7 @@
 
 const state = {
   user: null,
+  isAdmin: false,
   conversations: [],
   currentId: null,
   streaming: false,
@@ -47,10 +48,22 @@ function showLogin() {
 
 function showChat() {
   $("login-view").hidden = true;
+  $("settings-view").hidden = true;
   $("chat-view").hidden = false;
   $("logout-btn").hidden = false;
+  $("settings-btn").hidden = !state.isAdmin;
   $("user-label").textContent = state.user.username;
   renderConversationList();
+}
+
+function showSettings() {
+  $("chat-view").hidden = true;
+  $("settings-view").hidden = false;
+}
+
+function hideSettings() {
+  $("settings-view").hidden = true;
+  $("chat-view").hidden = false;
 }
 
 /* ---------------------------------------------------- conversations */
@@ -400,6 +413,7 @@ function renderMarkdown(text, sources = []) {
 async function boot() {
   try {
     state.user = await api("/v1/me");
+    state.isAdmin = !!state.user.is_admin;
     showChat();
     await refreshConversations();
   } catch {
@@ -431,6 +445,49 @@ $("login-form").addEventListener("submit", async (e) => {
 $("logout-btn").addEventListener("click", async () => {
   await fetch("/v1/auth/logout", { method: "POST", credentials: "same-origin" });
   showLogin();
+});
+
+/* ---------------------------------------------------------- settings */
+
+const SETTING_FIELDS = [
+  ["set-llm-base-url", "llm_base_url"],
+  ["set-llm-model", "llm_model"],
+  ["set-llm-context-window", "llm_context_window"],
+  ["set-search-url", "search_url"],
+  ["set-search-max-results", "search_max_results"],
+  ["set-search-snippet-chars", "search_snippet_chars"],
+  ["set-history-window", "history_window"],
+];
+
+async function openSettings() {
+  if (!state.isAdmin) return;
+  try {
+    const s = await api("/v1/settings");
+    for (const [id, key] of SETTING_FIELDS) $(id).value = s[key];
+    $("settings-status").textContent = "";
+    showSettings();
+  } catch (e) {
+    alert(`Could not load settings: ${e.message}`);
+  }
+}
+
+$("settings-btn").addEventListener("click", openSettings);
+$("settings-back-btn").addEventListener("click", hideSettings);
+$("settings-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const status = $("settings-status");
+  const body = {};
+  for (const [id, key] of SETTING_FIELDS) {
+    const raw = $(id).value.trim();
+    body[key] = /^[0-9]+$/.test(raw) ? Number(raw) : raw;
+  }
+  try {
+    await api("/v1/settings", { method: "PUT", body: JSON.stringify(body) });
+    status.textContent = "Saved";
+    setTimeout(() => (status.textContent = ""), 2000);
+  } catch (ex) {
+    status.textContent = ex.message;
+  }
 });
 
 $("new-chat-btn").addEventListener("click", newChat);

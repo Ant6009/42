@@ -13,15 +13,22 @@ pub use service::AuthService;
 
 /// CLI: `42 admin create-user <name>` — prompts for a password (twice),
 /// inserts the user as a regular user.
-pub fn cli_create_user(config: &Config, username: &str) -> anyhow::Result<()> {
+pub fn cli_create_user(
+    config: &Config,
+    username: &str,
+    is_admin: bool,
+) -> anyhow::Result<()> {
     let store = Store::open(std::path::Path::new(&config.database.path))?;
     let password = rpassword::prompt_password("Password: ")?;
     let confirm = rpassword::prompt_password("Confirm: ")?;
     if password != confirm {
         anyhow::bail!("passwords do not match");
     }
-    let id = AuthService::create_user(&store, username, &password, false)?;
-    println!("created user '{username}' (id {id})");
+    let id = AuthService::create_user(&store, username, &password, is_admin)?;
+    println!(
+        "created user '{username}' (id {id}){}",
+        if is_admin { " [admin]" } else { "" }
+    );
     Ok(())
 }
 
