@@ -1,9 +1,3 @@
-pub mod auth;
-pub mod engine;
-pub mod server;
-pub mod store;
-pub mod web;
-
 /// 42 service configuration, loaded from a TOML file.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Config {

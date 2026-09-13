@@ -8,7 +8,7 @@
     rust-analyzer
     pkg-config
     # Build deps for crates that compile C (rusqlite bundled, ring, etc.)
-    cc
+    gcc
     sqlite
     # Playwright e2e
     nodejs
@@ -17,11 +17,7 @@
     curl
   ];
 
-  languages.rust = {
-    enable = true;
-    rustfmt = true;
-    clippy = true;
-  };
+  languages.rust.enable = true;
 
   enterShell = ''
     alias l=just

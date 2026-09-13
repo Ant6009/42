@@ -3,5 +3,7 @@
 
 /// Build the chat message list for one LLM call.
 pub fn build_messages() -> Vec<serde_json::Value> {
-    todo!("system prompt with citation instructions, sources block, history window, current question")
+    todo!(
+        "system prompt with citation instructions, sources block, history window, current question"
+    )
 }

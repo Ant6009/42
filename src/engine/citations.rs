@@ -5,7 +5,7 @@
 //! weak local models cannot invent citations.
 
 /// A source returned by search and injected into the prompt.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Source {
     pub index: usize,
     pub title: String,
