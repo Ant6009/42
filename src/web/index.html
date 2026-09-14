@@ -8,6 +8,7 @@
 </head>
 <body>
   <div id="app">
+    <div id="sidebar-backdrop" hidden></div>
     <aside id="sidebar">
       <div class="sidebar-header">
         <span class="logo">42</span>
@@ -76,6 +77,9 @@
 
       <!-- Chat view -->
       <section id="chat-view" hidden>
+        <div id="chat-topbar">
+          <button id="menu-btn" title="Conversations">&#9776;</button>
+        </div>
         <div id="messages"></div>
         <div id="composer">
           <form id="ask-form">

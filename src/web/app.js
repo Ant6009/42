@@ -102,6 +102,7 @@ function newChat() {
   state.sources = [];
   $("messages").innerHTML = "";
   renderConversationList();
+  closeSidebarIfMobile();
   $("question").focus();
 }
 
@@ -116,6 +117,7 @@ async function openConversation(id) {
     appendMessage(m.role, m.content, m.sources || []);
   }
   renderConversationList();
+  closeSidebarIfMobile();
   scrollToBottom();
 }
 
@@ -488,6 +490,27 @@ $("settings-form").addEventListener("submit", async (e) => {
   } catch (ex) {
     status.textContent = ex.message;
   }
+});
+
+/* ---------------------------------------------------- mobile sidebar */
+
+function isMobile() {
+  return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function setSidebar(open) {
+  $("sidebar").classList.toggle("open", open);
+  $("sidebar-backdrop").hidden = !open;
+}
+
+function closeSidebarIfMobile() {
+  if (isMobile()) setSidebar(false);
+}
+
+$("menu-btn").addEventListener("click", () => setSidebar(true));
+$("sidebar-backdrop").addEventListener("click", () => setSidebar(false));
+window.addEventListener("resize", () => {
+  if (!isMobile()) setSidebar(false);
 });
 
 $("new-chat-btn").addEventListener("click", newChat);
