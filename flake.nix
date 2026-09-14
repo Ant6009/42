@@ -68,7 +68,7 @@
             after = [ "network-online.target" ];
             wants = [ "network-online.target" ];
             serviceConfig = {
-              ExecStart = "${pkgs.callPackage pkg {}}/bin/42 --config ${config.services.fortytwo.configPath}";
+              ExecStart = "${pkg pkgs}/bin/42 --config ${config.services.fortytwo.configPath}";
               Restart = "on-failure";
               RestartSec = 3;
               StateDirectory = "42";   # /var/lib/42 for the SQLite DB
