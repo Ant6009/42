@@ -1,6 +1,5 @@
 /target
 /.devenv
-/Cargo.lock
 node_modules/
 *.sqlite
 *.sqlite-journal
