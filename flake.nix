@@ -65,9 +65,9 @@
               RestartSec = 3;
               StateDirectory = "42";   # /var/lib/42 for the SQLite DB
               StateDirectoryMode = "0750";
+              User = "42";
               Group = "42";
             };
-            user = "42";
           };
 
           users.users."42" = {
