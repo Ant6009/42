@@ -11,13 +11,21 @@
         let pkgs = nixpkgs.legacyPackages.${system};
         in f pkgs
       );
-      pkg = pkgs: pkgs.rustPlatform.buildRustPackage {
+      pkg = pkgs:
+      let
+        rustPlatform = pkgs.makeRustPlatform {
+          rustc = pkgs.rustc;
+          cargo = pkgs.cargo;
+        };
+      in
+      rustPlatform.buildRustPackage {
         pname = "42";
         version = "0.1.0";
         src = self;
         cargoBuildOptions = "";
-        # rusqlite is bundled; no system sqlite needed at build time.
-        nativeBuildInputs = [ pkgs.rustc pkgs.cargo pkgs.pkg-config ];
+        # rusqlite is bundled, TLS is rustls; no system deps needed at
+        # build time (cc comes from stdenv).
+        nativeBuildInputs = [ pkgs.pkg-config ];
         meta.description = "Standalone local-network Perplexity clone";
       };
     in
