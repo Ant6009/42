@@ -43,13 +43,15 @@
 
       nixosModules.default = { config, pkgs, ... }:
       {
-        options.services.fortytwo = {
-          enable = { type = "bool"; default = false; description = "Enable the 42 service."; };
-          configPath = {
-            type = "path";
-            default = "/etc/42/42.toml";
-            description = "Path to the 42 TOML config file.";
-          };
+        options.services.fortytwo.enable = lib.mkOption {
+          default = false;
+          type = lib.types.bool;
+          description = "Enable the 42 service.";
+        };
+        options.services.fortytwo.configPath = lib.mkOption {
+          type = lib.types.path;
+          default = "/etc/42/42.toml";
+          description = "Path to the 42 TOML config file.";
         };
 
         config = lib.mkIf config.services.fortytwo.enable {
