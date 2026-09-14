@@ -90,21 +90,19 @@ model = "your-model"
 context_window = 32768
 
 [search]
-url = "http://127.0.0.1:8888"           # SearXNG
-max_results = 6
+base_url = "http://127.0.0.1:8888"      # SearXNG
+max_sources = 8
 snippet_chars = 500
 
-[db]
+[database]
 path = "/var/lib/42/42.sqlite"
-
-[conversation]
-history_window = 10
+history_turns = 10
 
 # Optional: seed an admin account on first start (before the DB exists).
 # Generate a hash with:  42 admin hash-password
-[admin]
-username = "admin"
-password_hash = "$argon2id$v=19$..."
+# [admin]
+# username = "admin"
+# password_hash = "$argon2id$v=19$..."
 ```
 
 Then `nixos-rebuild switch` and open `http://<host>:4242`.
@@ -127,17 +125,17 @@ in the sidebar) — no restart needed.
 | Key | Default | Description |
 | --- | --- | --- |
 | `server.bind` | `127.0.0.1:4242` | Listen address. |
-| `db.path` | `42.sqlite` | SQLite file (WAL mode). |
+| `database.path` | `42.sqlite` | SQLite file (WAL mode). |
 | `llm.base_url` | — | OpenAI-compatible base URL (must end in `/v1` for llama.cpp/Ollama). |
 | `llm.model` | — | Model name passed to the endpoint. |
 | `llm.context_window` | `32768` | Rough token budget used to trim history. |
-| `search.url` | — | SearXNG base URL (JSON API enabled). |
-| `search.max_results` | `8` | Results injected into the prompt (5–8 works well). |
+| `search.base_url` | — | SearXNG base URL (JSON API enabled). |
+| `search.max_sources` | `8` | Results injected into the prompt (5–8 works well). |
 | `search.snippet_chars` | `500` | Per-snippet character budget. |
-| `conversation.history_window` | `10` | Max past turns re-sent to the model. |
+| `database.history_turns` | `10` | Max past turns re-sent to the model. |
 | `admin.username` / `admin.password_hash` | — | Seed an admin when the DB is new. |
 
-Everything except `server.bind` and `db.path` is editable at runtime via
+Everything except `server.bind` and `database.path` is editable at runtime via
 `GET/PUT /v1/settings` (admin only) or the settings page in the UI.
 
 ## HTTP API
