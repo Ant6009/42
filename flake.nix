@@ -22,7 +22,7 @@
         pname = "42";
         version = "0.1.0";
         src = self;
-        cargoLock = ./Cargo.lock;   # committed lockfile
+        cargoLock = { lockFile = ./Cargo.lock; };   # committed lockfile
         cargoBuildOptions = "";
         # rusqlite is bundled, TLS is rustls; no system deps needed at
         # build time (cc comes from stdenv).
