@@ -74,17 +74,18 @@
               RestartSec = 3;
               StateDirectory = "42";   # /var/lib/42 for the SQLite DB
               StateDirectoryMode = "0750";
-              User = "42";
-              Group = "42";
+              User = "fortytwo";       # numeric usernames are rejected by shadow
+              Group = "fortytwo";
             };
           };
 
-          users.users."42" = {
+          users.users.fortytwo = {
             isSystemUser = true;
-            group = "42";
+            group = "fortytwo";
+            home = "/var/lib/42";
             description = "42 service user";
           };
-          users.groups."42" = { };
+          users.groups.fortytwo = { };
 
           # The config file itself is managed outside this module (e.g. by the
           # host's own environment.etc or agenix); it must be readable by the
